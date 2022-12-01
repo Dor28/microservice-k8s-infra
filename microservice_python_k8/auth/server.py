@@ -5,11 +5,13 @@ from flask_mysqldb import MySQL
 server = Flask(__name__)
 mysql = MySQL(server)
 
+
 server.config["MYSQL_HOST"] = os.environ.get("MYSQL_HOST")
 server.config["MYSQL_USER"] = os.environ.get("MYSQL_USER")
 server.config["MYSQL_PASSWORD"] = os.environ.get("MYSQL_PASSWORD")
 server.config["MYSQL_DB"] = os.environ.get("MYSQL_DB")
 server.config["MYSQL_PORT"] = os.environ.get("MYSQL_PORT")
+
 
 @server.route("/login", methods=["POST"])
 def login():
@@ -31,7 +33,40 @@ def login():
         if auth.username != email or auth.password != password:
             return "invalid credentials", 401
         else:
-            return createJWT(auth.username, os.environ.get("JWT_SECRET"), True)
+            return create_jwt(auth.username, os.environ.get("JWT_SECRET"), True)
     else:
         return "invalide credentials", 401
 
+@server.route("/validate", methods=["POST"])
+def validate():
+    encoded_jwt = request.headers["Authorization"]
+    if not encoded_jwt:
+        return "missing credentials", 401 
+
+    encoded_jwt = encoded_jwt.split(" ")[1]
+    try:
+        decoded_jwt = jwt.decode(
+            encoded_jwt, os.environ.get("JWT_SECRET"), algorithm=["HS256"]
+        )
+    except: 
+        return "not authorized", 403
+    
+    return decoded_jwt, 200
+
+def create_jwt(username, secret, is_admin):
+    return jwt.encode(
+        {
+            "username": username,
+            "expiration": datetime.datetime.now(tz=datetime.timezone.utc)
+            + datetime.timedelta(days=1),
+            "token_added": datetime.datetime.utcnow(),
+            "is_admin": is_admin
+        },
+        secret,
+        algorithm="HS256", 
+    )
+
+
+if __name__ == "__main__":
+    server.run(host="0.0.0.0", port=5000)
+ 
