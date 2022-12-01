@@ -1,1 +1,1 @@
-# microservice-k8s-infra
+# microservices-python-k8s-terraform
